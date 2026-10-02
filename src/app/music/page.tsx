@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, Heart, List, Pause, Play, Plus, Search, X } from 'lucide-react';
+import { ChevronLeft, Heart, List, Pause, Play, Plus, Search, X, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -10,6 +10,7 @@ interface Song {
   artist: string;
   url: string;
   duration: number;
+  source?: string;
 }
 
 export default function MusicPlayer() {
@@ -22,6 +23,8 @@ export default function MusicPlayer() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'songs' | 'favorites' | 'playlist'>('songs');
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [include1Music, setInclude1Music] = useState(false);
 
   // 加载本地存储的数据
   useEffect(() => {
@@ -48,6 +51,29 @@ export default function MusicPlayer() {
 
     loadSongs();
   }, []);
+
+  // 搜索歌曲
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      const res = await fetch('/api/music/songs');
+      const data = await res.json();
+      setSongs(data.data || []);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const source = include1Music ? '&source=1music' : '';
+      const res = await fetch(`/api/music/songs?q=${encodeURIComponent(query)}${source}`);
+      const data = await res.json();
+      setSongs(data.data || []);
+    } catch (error) {
+      console.error('Search failed:', error);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   // 搜索过滤
   const filteredSongs = songs.filter(
@@ -84,6 +110,10 @@ export default function MusicPlayer() {
 
   // 播放歌曲
   const playSong = (song: Song) => {
+    if (!song.url) {
+      alert('该歌曲暂无播放链接');
+      return;
+    }
     setCurrentSong(song);
     setIsPlaying(true);
   };
@@ -121,10 +151,37 @@ export default function MusicPlayer() {
                 type='text'
                 placeholder='搜索歌曲或艺术家...'
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className='w-full bg-gray-800 text-white placeholder-gray-500 rounded-full pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition'
+                onChange={(e) => handleSearch(e.target.value)}
+                disabled={searching}
+                className='w-full bg-gray-800 text-white placeholder-gray-500 rounded-full pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50'
               />
+              {searching && <div className='absolute right-3 top-1/2 -translate-y-1/2 animate-spin'>⏳</div>}
             </div>
+          </div>
+
+          {/* 搜索选项 */}
+          <div className='flex gap-2 items-center text-xs'>
+            <button
+              onClick={() => {
+                setInclude1Music(!include1Music);
+                if (searchQuery) {
+                  handleSearch(searchQuery);
+                }
+              }}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full transition ${
+                include1Music
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              <Zap className='w-4 h-4' />
+              1Music搜索
+            </button>
+            {include1Music && (
+              <span className='text-gray-400 text-xs'>
+                (搜索会较慢,请耐心等待)
+              </span>
+            )}
           </div>
 
           {/* 标签页 */}
@@ -171,7 +228,14 @@ export default function MusicPlayer() {
                 onClick={() => playSong(song)}
               >
                 <div className='flex-1 min-w-0'>
-                  <p className='font-bold text-sm truncate'>{song.title}</p>
+                  <div className='flex items-center gap-2'>
+                    <p className='font-bold text-sm truncate'>{song.title}</p>
+                    {song.source === '1music' && (
+                      <span className='text-xs bg-purple-600 px-2 py-0.5 rounded text-white'>
+                        1Music
+                      </span>
+                    )}
+                  </div>
                   <p className='text-gray-400 text-xs truncate'>{song.artist}</p>
                 </div>
 
@@ -195,15 +259,17 @@ export default function MusicPlayer() {
                   >
                     {favorites.includes(song.id) ? '❤️' : '🤍'}
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      addToPlaylist(song);
-                    }}
-                    className='text-lg hover:scale-110 transition'
-                  >
-                    {playlist.includes(song.id) ? '✓' : '+'}
-                  </button>
+                  {song.url && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToPlaylist(song);
+                      }}
+                      className='text-lg hover:scale-110 transition'
+                    >
+                      {playlist.includes(song.id) ? '✓' : '+'}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -237,7 +303,7 @@ export default function MusicPlayer() {
         )}
 
         {/* 音频播放器 */}
-        {currentSong && (
+        {currentSong && currentSong.url && (
           <audio
             key={currentSong.id}
             autoPlay
@@ -253,8 +319,8 @@ export default function MusicPlayer() {
         {/* 操作按钮 */}
         <div className='px-4 py-3 flex gap-2'>
           <button
-            onClick={() => addToPlaylist(currentSong!)}
-            disabled={!currentSong || playlist.includes(currentSong.id)}
+            onClick={() => currentSong && addToPlaylist(currentSong)}
+            disabled={!currentSong || !currentSong.url || playlist.includes(currentSong.id)}
             className='flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg py-2 font-medium transition text-sm'
           >
             <Plus className='w-4 h-4' />
