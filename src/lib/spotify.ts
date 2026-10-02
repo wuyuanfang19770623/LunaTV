@@ -4,7 +4,7 @@
  */
 
 let spotifyAccessToken: string | null = null;
-let tokenExpireTime: number = 0;
+let tokenExpireTime = 0;
 
 /**
  * 获取 Spotify 访问令牌
@@ -39,16 +39,17 @@ async function getSpotifyAccessToken(): Promise<string> {
   }
 
   const data = await response.json();
-  spotifyAccessToken = data.access_token;
+  const accessToken: string = data.access_token;
+  spotifyAccessToken = accessToken;
   tokenExpireTime = Date.now() + data.expires_in * 1000 - 60000; // 提前 1 分钟刷新
 
-  return spotifyAccessToken;
+  return accessToken;
 }
 
 /**
  * 搜索 Spotify 中的歌曲
  */
-export async function searchSpotifySongs(query: string, limit: number = 20) {
+export async function searchSpotifySongs(query: string, limit = 20) {
   const token = await getSpotifyAccessToken();
 
   const params = new URLSearchParams({
@@ -86,7 +87,7 @@ export async function searchSpotifySongs(query: string, limit: number = 20) {
 /**
  * 获取 Spotify 热门歌曲
  */
-export async function getSpotifyTrendingSongs(limit: number = 20) {
+export async function getSpotifyTrendingSongs(limit = 20) {
   const token = await getSpotifyAccessToken();
 
   // 获取热门播放列表
@@ -121,7 +122,7 @@ export async function getSpotifyTrendingSongs(limit: number = 20) {
 /**
  * 获取 Spotify 推荐歌曲
  */
-export async function getSpotifyRecommendations(seedArtists: string[] = [], limit: number = 20) {
+export async function getSpotifyRecommendations(seedArtists: string[] = [], limit = 20) {
   const token = await getSpotifyAccessToken();
 
   // 如果没有种子艺术家,使用一些流行的
