@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Cat, Clover, Film, Home, Radio, Star, Tv } from 'lucide-react';
+import { Cat, Clover, Film, Home, Music, Radio, Star, Tv } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -41,6 +41,11 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
       icon: Clover,
       label: '综艺',
       href: '/douban?type=show',
+    },
+    {
+      icon: Music,
+      label: '音乐',
+      href: '/music',
     },
     {
       icon: Radio,
@@ -94,7 +99,7 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
             <li
               key={item.href}
               className='flex-shrink-0'
-              style={{ width: '20vw', minWidth: '20vw' }}
+              style={{ width: `${100 / navItems.length}%`, minWidth: `${100 / navItems.length}%` }}
             >
               <Link
                 href={item.href}
@@ -125,3 +130,4 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
 };
 
 export default MobileBottomNav;
+
